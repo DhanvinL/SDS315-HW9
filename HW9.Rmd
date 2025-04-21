@@ -1,0 +1,258 @@
+---
+title: "HW9"
+author: "Dhanvin Lakshmisha"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+---
+
+Dhanvin Lakshmisha
+
+dl37833
+
+SDS 315
+
+GitHub link - https://github.com/DhanvinL/SDS315-HW9
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(knitr)
+library(mosaic)
+library(moderndive)
+library(effectsize)
+
+
+solder <- read.csv("solder.csv")
+groceries <- read.csv("groceries.csv")
+```
+
+## Question 1
+
+### Part A
+
+Here is a bar plot showing the relationship between size of the opening on the solder gun and number of skips.
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+ggplot(solder) + 
+  geom_boxplot(aes(x = Opening, y = skips)) +
+  labs(
+    title = "Boxplot of Solder Skips grouped by Opening Size",
+    x = "Opening Size (S = small, M = medium, L = large)",
+    y = "Number of Solder Skips")
+```
+
+
+The plot shows the distribution of the number of the skips for each type of opening size a solder gun may have (small, medium, and large). 
+
+As evident from the graph, the median number of skips for large, medium, and small opening sizes vary. Also, the variability for each open sizing is different for each one as well. This shows the opening size is affecting the number of skips there are. 
+
+Here is a bar plot showing the relationship between thickness of the opening and number of skips.
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+ggplot(solder) + 
+  geom_boxplot(aes(x = Solder, y = skips)) +
+  labs(
+    title = "Boxplot of Solder Skips grouped by Solder Thickness",
+    x = "Solder Thickness (Thick or Thin)",
+    y = "Number of Solder Skips")
+
+```
+
+
+The plot shows the distribution of the number of skips based on the thickness of the alloy used for solder, the levels being thick or thin. 
+
+The "thin" category of solder thickness has a greater median number of solder skips than that of the "thick category". The "thin" category also has greater variability. This shows that the thickness of the solder has an impact on the number of solder skips. 
+
+
+### Part B
+
+Now, we can build a regression model. Here is a 95 percent confidence interval table for each estimate. 
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+lmsolder <- lm(skips ~ Opening + Solder + Opening:Solder, data = solder)
+
+get_regression_table(lmsolder, conf.level = 0.95, digits = 2)
+
+
+```
+
+### Part C
+
+Intercept - When the opening is large and the solder is thick (the reference or baseline categories), the average number of skips is approximately 0.39.
+
+opening: M - When the opening is medium and Solder remains thick, the average number of skips increases by around 2.41.
+
+opening: S - When the opening is small and the Solder is thick, the number of skips increases by about 5.13.
+
+Solder: Thin - When Solder is changed from thick to thin and the opening is large, the average number of skips increases by about 2.28.
+
+opening M : SolderThin - The interaction term shows that when the opening is medium and solder is thin, there would be 0.74 fewer skips than we would expect from adding the individual main effects from medium opening and Thick Solder. 
+
+opening S : SolderThin - When the opening is small and the alloy used for the solder is thin, the combined effect is an additional 9.65 skips to the sum of individual main effects. 
+
+### Part D
+
+Based on the model and its coefficients, I would recommend using a large opening size and thick alloy for the solder, the baseline category. This combination as an average of 0.39 skips while other combinations result in a higher amount of skips. 
+
+
+
+## Question 2
+
+### Part A
+
+Here is a bar graph comparing a store and the average price of products sold at that store.
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+
+groceries <- groceries |>
+  mutate(
+    Product = factor(Product),
+    Store = factor(Store)
+  )
+
+
+store_avg <- groceries |>
+  group_by(Store) |>
+  summarize(avg_price = mean(Price))
+
+
+ggplot(store_avg) + 
+  geom_col(aes(x = reorder(Store, avg_price), y = avg_price)) +
+  labs(
+    title = "Average Product Price by Store",
+    x = "Store",
+    y = "Average Price of Products Sold at that Store",
+    caption = "Bar chart showing average price of all store products across each store."
+  ) + coord_flip() 
+```
+
+
+The bar plot above shows how the average price for the products in a store varies across stores, with Fiesta having the lowest average price for all their products and Whole Foods having the highest average price for all their products. 
+
+### Part B
+
+Here is a plot illustrating the frequency of each product.
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+stores_per_product <- groceries |>
+  count(Product, name = "Stores_Selling") |>
+  arrange(Stores_Selling) |>
+  mutate(Product = fct_reorder(Product, Stores_Selling))
+
+ggplot(stores_per_product) + 
+  geom_col(aes(x = Product, y = Stores_Selling)) +
+  labs(
+    title = "Product Availability Across Stores",
+    x = "Product",
+    y = "Number of Stores Selling that Product",
+    caption = "The chart shows the frequency of products across stores.") + 
+  coord_flip()
+
+```
+
+
+This plot shows the amount of stores that contain each product, with items such as milk and eggs appearing across 16 different stores and El Milagros Tortilla Chips and Cinnamon Toast Crunch not appearing as much. 
+
+
+### Part C
+
+Now, we can fit a linear regression. Here is information on the "Type: Convenience" coefficient. 
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+
+groceries <- groceries |>
+  mutate(
+    Product = factor(Product),
+    Type = relevel(factor(Type), ref = "Grocery"))
+
+
+pm1 <- lm(Price ~ Product + Type, data = groceries)
+
+tb <- get_regression_table(pm1, conf.level = 0.95, digits = 2)
+
+l_ci = tb[41,]$lower_ci
+u_ci = tb[41,]$upper_ci
+
+displa <- get_regression_table(pm1) |>
+  filter(str_detect(term, "^Type: Convenience"))
+
+displa
+
+```
+Compared with ordinary grocery stores, convenience stores charge somewhere between `r l_ci` and `r u_ci` dollars more for the same product.
+
+
+### Part D
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+sm1 <- lm(Price ~ Product + Store, data = groceries)
+
+se <- get_regression_table(sm1, conf.level = 0.95, digits = 2)
+
+se1 <- se |>
+  filter(str_detect(term, "^Store:"))
+
+se2 <- se1 |>
+  arrange(estimate)
+
+se2
+
+
+```
+
+Based on a linear regression table, we find that when holding product constant, Walmart and Kroger Fresh Fare charge the lowest prices when comparing the same product. On the other hand, Wheatsville Food Co-Op and Whole Foods seem the charge the highest prices when holding product constant. 
+
+### Part E
+
+Based on the regression table, HEB has an estimate of -0.65 and Central Market has an estimate of -0.57. This means that, holding product constant, Central Market charges about 0.08 dollars more than H-E-B, which is calculated from taking HEB's estimate (-0.65) and subtracting Central Market's estimate (-0.57). Thus, from a statistical standpoint, Central Market charges more than HEB for the same product. However, from a practical standpoint, the difference between the two stores is marginal. For instance, Whole Foods charges .36 dollars more than the baseline (about 1.01 dollars more than HEB for the same product). Also, Walgreen charges 0.22 dollars more than the baseline (about 0.87 dollars more than HEB for the same product) Thus, in reference to all the stores, Central Market charging more is not entirely significant and could be much worse.  
+
+### Part F
+
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+
+groceries <- groceries |>
+  mutate(Income10K = Income / 10000,
+          Product = factor(Product))
+
+mi1 <- lm(Price ~ Product + Income10K, data = groceries)
+
+mi1_income <- get_regression_table(mi1) |>
+  filter(term == "Income10K")
+
+mi1_income
+```
+
+Based on a linear regression with Price as the outcome variable and Product and Income10K as the predictors, the Income10k coefficient is about -0.01408973. Since the sign is negative, the value tells us that for every 10000 dollar increase in ZIP code income, the average price of a product decreases by about $0.014. Thus, for the same product, people in poorer ZIP codes pay slightly more. 
+
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+
+sp <- standardize_parameters(mi1)
+sp[41,]
+```
+
+
+Also, a one-standard deviation increase in the income of a ZIP code seems to be associated with a -0.03 standard-deviation change in the price that consumers in that ZIP code expect to pay for the same product.
+
+## Question 3
+
+A - 
+This statement is true as seen from figure A1. The graph on figure A1 shows that as the minority percentage increases, the FAIR policies per 100 housing units increases. This is supported by the positive coefficient of "minority" in the regression table and the confidence interval for the slope not containing 0 and being greater than 0 in the 95 percent confidence interval. This positive slope indicates there is a positive relationship between minority percentage and FAIR policies.
+
+B - 
+This statement is undecidable due to a lack of evidence. Figure B1's linear regression shows a positive relationship between the age of housing and minority percentage. From this, it is evident there is a relationship between the two predictors. However, it is uncertain whether there is an interaction between the two predictors affecting FAIR policies specifically. The information on the affect of FAIR policies is missing and hence the statement is undecidable.     
+
+C - 
+The statement is false. Assuming "stronger" means that the slope is greater or steeper, the interaction term shows that when it is a low-fire-risk ZIP code, the slope or coefficient for minority percentage decreases by 0.001. While there is a difference, this difference is marginal and not statistically significant. The 95 percent confidence interval for this coefficient is from -0.12 to 0.01. This interval includes 0 (making the difference not statistically significant) and includes values greater than 0. Thus, there is a chance that the true coefficient for the interaction term could be 0 or greater than 0, making the statement false. In a narrow scope, the statement merely stating that one slope is stronger or is steeper than the other, which is not true as evident from the confidence interval of the interaction. Since the interaction is the one changing the slope or minority coefficient for low-risk and high-risk ZIP codes, we cannot make a concrete statement that one slope is stronger than the other. 
+
+D - 
+False, coefficient for minority is 0.01, which is not 0, meaning income did not explain away the impact of minority percentage completely. Also, the 95 percent confidence interval for the coefficient is approximately from 0.004 to to 0.015. We are 95 percent confident that the true coefficient for minority, after controlling for income, is in that interval. Since, that interval does not contain 0, it is unlikely that income explained away all the impact of the minority percentage. However, it did explain away some of the impact. Before adjusting for income the coefficient for minority was 0.014 and after adjusting it decreased to 0.01. This suggests that impact did explain away some of the impact of minority percentage. 
+
+E - 
+True, based on model_E, even after holding income, fire, and age constant, the coefficient for minority percentage is approximately 0.008 and has a 95 percent confidence interval from 0.004 to 0.04. Since, the estimate and the 95 percent confidence interval does not include 0, even after controlling for other variables, we can say that the minority percentage and the number of FAIR policies are still positively associated at the ZIP code level. 
+
+
